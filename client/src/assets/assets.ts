@@ -51,7 +51,7 @@ export const appPromoBannerData = {
 
 export const footerData = {
     brand: {
-        name: "Instacart",
+        name: "freshcart",
         description: "Bringing fresh, organic groceries straight from local farms to your doorstep. Nourish your home with Earth's finest.",
         socials: [
             { icon: SiFacebook, link: "#" },
