@@ -49,6 +49,7 @@ export function CartProvider({children} : {children : ReactNode}) {
         setItems((prev)=> prev.map((item)=>(item.product._id === productId ? {...item, quantity} : item)))
      }
 
+
      const clearCart = () => {
         setItems([])
         setIsCartOpen(false)
