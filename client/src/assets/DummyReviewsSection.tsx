@@ -68,7 +68,7 @@ export default function DummyReviewsSection({ product }: { product: Product }) {
                 {/* Summary row */}
                 <div className="flex flex-col md:flex-row gap-8 mb-8 pb-8 border-b border-app-border">
                     {/* Average */}
-                    <div className="flex-center flex-col md:min-w-[160px] lg:w-1/3">
+                    <div className="flex-center flex-col md:min-w-40 lg:w-1/3">
                         <span className="text-5xl font-semibold text-app-green">{product.rating}</span>
                         <div className="flex items-center gap-0.5 mt-2 mb-1">
                             {[1, 2, 3, 4, 5].map((s) => (
