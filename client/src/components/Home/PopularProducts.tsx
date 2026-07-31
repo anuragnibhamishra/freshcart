@@ -8,7 +8,7 @@ const PopularProducts = () => {
   const [products, setProducts] = useState<Product[]>([])
   useEffect(() => {
     setProducts(dummyProducts.slice(0, 10))
-  })
+  }, [])
   return (
     <section className="pd-16">
       <div className="max-w-7xl mx-auto">
