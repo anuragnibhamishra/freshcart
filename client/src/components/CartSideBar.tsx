@@ -29,7 +29,7 @@ const CartSideBar = () => {
         </div>
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
           {items.length === 0 ? (
-            <div className="flex flex-center items-center justify-center flex-center h-full">
+            <div className="flex flex-col flex-center items-center justify-center flex-center h-full">
               <ShoppingBagIcon className="size-16 text-app-border mb-4 " />
               <h3 className="text-lg font-medium mb-1">Your cart is empty</h3>
             </div>
