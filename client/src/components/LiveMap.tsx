@@ -35,7 +35,7 @@ export default function LiveMap({ order, liveLocation }: { order: any, liveLocat
     return (
         <>
             {order.status !== "Delivered" && order.status !== "Cancelled" && (
-                <div className="rounded-2xl overflow-hidden border border-app-border" style={{ height: 280 }}>
+                <div className="rounded-2xl z-0 isolate overflow-hidden border border-app-border" style={{ height: 280 }}>
                     {liveLocation && liveLocation.lat !== 0 ? (
                         <MapContainer center={[liveLocation.lat, liveLocation.lng]} zoom={15} style={{ height: "100%", width: "100%" }} zoomControl={false}>
                             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
