@@ -37,7 +37,7 @@ const MyOrder = () => {
     <div className="min-h-screen bg-app-cream mb-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <h1 className="text-2xl font-semibold text-app-green mb-6">My Orders</h1>
-        <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+        <div className="flex gap-2 mb-6 flex-wrap pb-2">
           {tabs.map((tab) => (
             <button key={tab} onClick={() => setActiveTab(tab)} className={`px-4 py-2 text-sm font-medium rounded-xl whitespace-nowrap transition-colors ${activeTab === tab ? "bg-app-green text-white" : "bg-white text-app-text-light hover:bg-app-cream-dark"}`}>{tab === "all" ? "All Orders" : tab}</button>
           ))}
