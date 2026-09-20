@@ -71,7 +71,7 @@ export const login = async (req: Request, res: Response) => {
     }
 
     const user = await prisma.user.findUnique({
-        where: { email: email.toLowerCase(), include: {addresses: true} }
+        where: { email: email.toLowerCase() }
     });
 
     if (!user) {
