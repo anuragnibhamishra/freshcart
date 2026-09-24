@@ -3,9 +3,10 @@ import { ArrowUpRightIcon, ChevronDownIcon, LogOutIcon, MapPinIcon, MenuIcon, Pa
 import React, { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { useCart } from "../context/CartContext"
+import { useAuth } from "../context/AuthContext"
 
 const Navbar = () => {
-    const user: any = { name: "Anurag Mishra", email: "anurag@example.com", isAdmin: true }
+    const {user, logout} = useAuth()
     const { cartCount, setIsCartOpen } = useCart()
     const [searchQuery, setSearchQuery] = useState("")
     const [userMenuOpen, setUserMenuOpen] = useState(false)
@@ -18,6 +19,7 @@ const Navbar = () => {
         }
     }
     const handleLogout = () => {
+        logout()
         setUserMenuOpen(false)
         navigate("/")
     }

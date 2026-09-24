@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import type { Order } from "../types"
-import { dummyDashboardOrdersData } from "../assets/assets"
 import Loading from "../components/Home/Loading"
 import { ArrowLeftIcon, MapPinIcon, PhoneIcon } from "lucide-react"
 import OrderOTP from "../components/OrderOTP"
 import LiveMap from "../components/LiveMap"
 import OrderTimeLine from "../components/OrderTimeLine"
+import api from "../config/api"
 
 const OrderTracking = () => {
   const currency = import.meta.env.VITE_CURRENCY_SYMBOL || "$"
@@ -18,9 +18,32 @@ const OrderTracking = () => {
   const [liveLocation, setLiveLocation] = useState<{ lat: number; lng: number } | null>(null)
 
   useEffect(() => {
-    setOrder(dummyDashboardOrdersData.find((o) => o._id === id) as any)
-    setLoading(false)
+    api.get(`/orders/${id}`).then((res)=> setOrder(res.data.order)).catch(()=>navigate("/orders")).finally(()=>setLoading(false))
+
   }, [id, navigate])
+
+  useEffect(()=> {
+    if (!order || ["Delivered", "Cancelled", "Placed"].includes(order.status)) return;
+    const fetchLocation = async () => {
+      try {
+        const {data} = await api.get(`/orders/${id}/location`)
+        if(data.liveLocation?.lat && data.liveLocation?.lng && data.liveLocation.updatedAt) {
+          setLiveLocation({
+            lat: data.liveLocation.lat,
+            lng: data.liveLocation.lng
+          })
+        }
+        if(data.status && data.status !== order.status) {
+          setOrder((prev) => prev ? {...prev, status: data.status} : prev)
+        }
+      } catch {
+        
+      }
+    }
+    fetchLocation()
+    const interval = setInterval(fetchLocation, 10000)
+    return () => clearInterval(interval)
+  }, [id, order?.status])
 
   if (loading) return <Loading />
   if (!order) null
@@ -29,12 +52,12 @@ const OrderTracking = () => {
   return (
     <div className="min-h-screen mb-20 bg-app-cream ">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <button className="flex items-center gap-2 text-sm text-app-text-light hover:text-app-green mb-6 transition-colors">
+        <button onClick={() => navigate("/orders")} className="flex items-center gap-2 text-sm text-app-text-light hover:text-app-green mb-6 transition-colors">
           <ArrowLeftIcon className="size-4" /> Back to Orders
         </button>
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1>Order #{order!._id.slice(-8).toUpperCase()}</h1>
+            <h1>Order #{order!.id.slice(-8).toUpperCase()}</h1>
             <p>Placed on {new Date(order!.createdAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</p>
           </div>
           <span className={`px-4 py-1.5 text-sm font-semibold rounded-full ${order!.status === "Delivered" ? "bg-green-100 text-green-700" : order!.status === "Cancelled" ? "bg-red-100 text-red-700 " : "bg-app-orange/10 text-app-orange"}`}>
