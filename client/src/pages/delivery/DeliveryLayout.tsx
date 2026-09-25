@@ -6,7 +6,20 @@ import { IconLeaf } from "@tabler/icons-react";
 
 export default function DeliveryLayout() {
     const navigate = useNavigate();
-    const [partner, setPartner] = useState<DeliveryPartner | null>(null);
+    const [partner, setPartner] = useState<DeliveryPartner | null>(() => {
+        const saved = localStorage.getItem("delivery_partner");
+        const token = localStorage.getItem("delivery_token");
+
+        if (!saved || !token) return null;
+
+        try {
+            return JSON.parse(saved) as DeliveryPartner;
+        } catch {
+            localStorage.removeItem("delivery_partner");
+            localStorage.removeItem("delivery_token");
+            return null;
+        }
+    });
 
     useEffect(() => {
         const saved = localStorage.getItem("delivery_partner");
@@ -14,10 +27,7 @@ export default function DeliveryLayout() {
 
         if (!saved || !token) {
             navigate("/delivery/login");
-            return;
         }
-
-        setPartner(JSON.parse(saved));
     }, [navigate]);
 
     const handleLogout = () => {

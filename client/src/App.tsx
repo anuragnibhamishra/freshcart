@@ -1,31 +1,35 @@
+import { lazy, Suspense } from "react"
 import { Toaster } from "react-hot-toast"
 import { Route, Routes } from "react-router-dom"
-import Login from "./pages/Login"
 import AppLayout from "./pages/AppLayout"
 import Home from "./pages/Home"
-import Products from "./pages/Products"
-import FlashDeals from "./pages/FlashDeals"
-import SearchResults from "./pages/SearchResults"
-import ProductPage from "./pages/ProductPage"
-import Checkout from "./pages/Checkout"
-import Addresses from "./pages/Addresses"
-import MyOrder from "./pages/MyOrder"
-import OrderTracking from "./pages/OrderTracking"
 import ProtectedRoute from "./components/ProtectedRoute"
 import AdminLayout from "./pages/admin/AdminLayout"
-import AdminDashboard from "./pages/admin/AdminDashboard"
-import AdminProducts from "./pages/admin/AdminProducts"
-import AdminProductForm from "./pages/admin/AdminProductForm"
-import AdminOrders from "./pages/admin/AdminOrders"
-import AdminDeliveryPartners from "./pages/admin/AdminDeliveryPartners"
-import DeliveryLogin from "./pages/delivery/DeliveryLogin"
-import DeliveryDashboard from "./pages/delivery/DeliveryDashboard"
 import DeliveryLayout from "./pages/delivery/DeliveryLayout"
+import Loading from "./components/Home/Loading"
+
+const Login = lazy(() => import("./pages/Login"))
+const Products = lazy(() => import("./pages/Products"))
+const FlashDeals = lazy(() => import("./pages/FlashDeals"))
+const SearchResults = lazy(() => import("./pages/SearchResults"))
+const ProductPage = lazy(() => import("./pages/ProductPage"))
+const Checkout = lazy(() => import("./pages/Checkout"))
+const Addresses = lazy(() => import("./pages/Addresses"))
+const MyOrder = lazy(() => import("./pages/MyOrder"))
+const OrderTracking = lazy(() => import("./pages/OrderTracking"))
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"))
+const AdminProducts = lazy(() => import("./pages/admin/AdminProducts"))
+const AdminProductForm = lazy(() => import("./pages/admin/AdminProductForm"))
+const AdminOrders = lazy(() => import("./pages/admin/AdminOrders"))
+const AdminDeliveryPartners = lazy(() => import("./pages/admin/AdminDeliveryPartners"))
+const DeliveryLogin = lazy(() => import("./pages/delivery/DeliveryLogin"))
+const DeliveryDashboard = lazy(() => import("./pages/delivery/DeliveryDashboard"))
 
 const App = () => {
   return (
     <>
       <Toaster position="top-right" toastOptions={{duration:3000, style: {background : "#1B3022", color: "#fff", borderRadius: "12px", fontSize: "14px"}}} />
+      <Suspense fallback={<Loading />}>
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<AppLayout />} >
@@ -52,9 +56,11 @@ const App = () => {
         </Route>
 
         <Route path="/delivery/login" element={<DeliveryLogin />}/>
-        <Route path="/delivery" element={<DeliveryLayout />}/>
-        <Route index element={<DeliveryDashboard />}/>
+        <Route path="/delivery" element={<DeliveryLayout />}>
+          <Route index element={<DeliveryDashboard />} />
+        </Route>
       </Routes>
+      </Suspense>
     </>
   )
 }

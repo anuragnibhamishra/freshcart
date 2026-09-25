@@ -4,14 +4,18 @@ import { Link } from "react-router-dom"
 import { ArrowRightIcon } from "lucide-react"
 import ProductCard from "../ProductCard"
 import api from "../../config/api"
+import axios from "axios"
 import toast from "react-hot-toast"
 const PopularProducts = () => {
   const [products, setProducts] = useState<Product[]>([])
   useEffect(() => {
-  api.get('/products?sort=rating').then(({ data }) => {
+  api.get('/products?sort=rating&limit=10').then(({ data }) => {
     setProducts(data.products)
-  }).catch((error: any) => {
-    toast.error(error.response.data.message || error?.message);
+  }).catch((error: unknown) => {
+    const message = axios.isAxiosError<{ message?: string }>(error)
+      ? error.response?.data?.message || error.message
+      : error instanceof Error ? error.message : "Failed to load popular products"
+    toast.error(message)
   })
 }, [])
   return (

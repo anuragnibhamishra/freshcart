@@ -1,11 +1,27 @@
 import { Request, Response } from "express";
 import { prisma } from "../config/prisma.js";
 
+const productListSelect = {
+    id: true,
+    name: true,
+    price: true,
+    originalPrice: true,
+    image: true,
+    category: true,
+    unit: true,
+    stock: true,
+    rating: true,
+    reviewCount: true,
+    createdAt: true
+};
+
 // GET /api/products/flash-deals
 export const getFlashDeals = async (req: Request, res: Response) => {
     const products = await prisma.product.findMany({
         where: { stock: { gt: 0 } },
-        orderBy: { originalPrice: "desc" }
+        orderBy: { originalPrice: "desc" },
+        take: 8,
+        select: productListSelect
     });
 
     const productsWithDiscount = products.map((p: any) => {
@@ -22,7 +38,7 @@ export const getFlashDeals = async (req: Request, res: Response) => {
 }
 
 export const getProducts = async (req: Request, res: Response) => {
-    const { category, search, minPrice, maxPrice, sort } = req.query;
+    const { category, search, minPrice, maxPrice, sort, organic } = req.query;
     const where: any = {};
 
     if (category && category !== "all")
@@ -30,6 +46,9 @@ export const getProducts = async (req: Request, res: Response) => {
 
     if (search)
         where.name = { contains: search as string, mode: "insensitive" };
+
+    if (organic)
+        where.isOrganic = organic === "true";
 
     if (minPrice || maxPrice) {
         where.price = {};
@@ -43,22 +62,51 @@ export const getProducts = async (req: Request, res: Response) => {
 
     const orderBy: any = {};
 
-    if (sort === "price-low")
+    if (sort === "price-low" || sort === "price_asc")
         orderBy.price = "asc";
-    else if (sort === "price-high")
+    else if (sort === "price-high" || sort === "price_desc")
         orderBy.price = "desc";
+    else if (sort === "rating")
+        orderBy.rating = "desc";
+    else if (sort === "name")
+        orderBy.name = "asc";
     else
         orderBy.createdAt = "desc";
-    const products = await prisma.product.findMany({
-        where, orderBy
-    })
+
+    const hasPage = req.query.page !== undefined;
+    const requestedLimit = Number.parseInt(String(req.query.limit || "12"), 10);
+    const limit = hasPage || req.query.limit !== undefined
+        ? Math.min(Math.max(Number.isFinite(requestedLimit) ? requestedLimit : 12, 1), 100)
+        : undefined;
+    const page = Math.max(Number.parseInt(String(req.query.page || "1"), 10) || 1, 1);
+    const query: any = { where, orderBy, select: productListSelect };
+
+    if (limit !== undefined) {
+        query.take = limit;
+        query.skip = (page - 1) * limit;
+    }
+
+    let products;
+    let total: number | undefined;
+    if (hasPage) {
+        [products, total] = await Promise.all([
+            prisma.product.findMany(query),
+            prisma.product.count({ where })
+        ]);
+    } else {
+        products = await prisma.product.findMany(query);
+    }
+
     const productsWithDiscount = products.map((p: any) => {
         const discount = p.originalPrice && p.price ? Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100) : 0;
         return { ...p, discount }
     })
     res.json({
-        products: productsWithDiscount
-    })
+        products: productsWithDiscount,
+        ...(total !== undefined && limit !== undefined
+            ? { total, pages: Math.ceil(total / limit) }
+            : {})
+    });
 }
 
 export const getProduct = async (req: Request, res: Response) => {

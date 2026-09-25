@@ -1,12 +1,13 @@
 import { Link, useSearchParams } from "react-router-dom"
 import type { Product } from "../types"
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { categoriesData } from "../assets/assets"
 import { ChevronDown, Home, SlidersHorizontal, XIcon } from "lucide-react"
 import ProductCard from "../components/ProductCard"
 import Loading from "../components/Home/Loading"
 import FilterPanel from "../components/FilterPanel"
 import api from "../config/api"
+import axios from "axios"
 import toast from "react-hot-toast"
 
 const Products = () => {
@@ -23,7 +24,7 @@ const Products = () => {
   const minPrice = searchParams.get("minPrice") || ""
   const maxPrice = searchParams.get("maxPrice") || ""
 
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     setLoading(true)
     try {
       const params = new URLSearchParams()
@@ -31,7 +32,7 @@ const Products = () => {
       if (category) params.set('category', category)
       if (organic) params.set('organic', organic)
       if (sort) params.set('sort', sort)
-      if (sort) params.set('sort', sort)
+      if (minPrice) params.set('minPrice', minPrice)
       if (maxPrice) params.set('maxPrice', maxPrice)
       params.set("page", String(page))
       params.set("limit", "12")
@@ -39,12 +40,15 @@ const Products = () => {
       const { data } = await api.get(`/products?${params.toString()}`);
       setProducts(data.products)
       setTotalPages(data.pages)
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || error?.message)
+    } catch (error: unknown) {
+      const message = axios.isAxiosError<{ message?: string }>(error)
+        ? error.response?.data?.message || error.message
+        : error instanceof Error ? error.message : "Failed to load products"
+      toast.error(message)
     } finally {
       setLoading(false)
     }
-  }
+  }, [category, organic, sort, page, minPrice, maxPrice])
 
   const updateFilter = (key: string, value: string) => {
     const newParams = new URLSearchParams(searchParams.toString())
@@ -66,8 +70,14 @@ const Products = () => {
 
 
   useEffect(() => {
-    fetchProducts()
-  }, [category, organic, sort, page, minPrice, maxPrice])
+    let active = true
+    queueMicrotask(() => {
+      if (active) void fetchProducts()
+    })
+    return () => {
+      active = false
+    }
+  }, [fetchProducts])
   return (
     <div className="min-h-screen bg-app-cream">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">

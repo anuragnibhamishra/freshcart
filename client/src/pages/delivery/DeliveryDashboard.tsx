@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { PackageIcon, NavigationIcon } from "lucide-react";
 import OtpModal from "../../components/Delivery/OtpModal";
 import CancelModal from "../../components/Delivery/CancelModal";
@@ -13,11 +13,20 @@ const getAuthHeaders = () => ({
     headers: { Authorization: `Bearer ${localStorage.getItem("delivery_token")}` }
 });
 
+const getRequestErrorMessage = (error: unknown, fallback: string) => {
+    if (axios.isAxiosError<{ message?: string }>(error)) {
+        return error.response?.data?.message || error.message || fallback;
+    }
+    return error instanceof Error ? error.message : fallback;
+};
+
 
 export default function DeliveryDashboard() {
 
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [locationError, setLocationError] = useState<string | null>(null);
     const [tab, setTab] = useState<"active" | "completed">("active");
     const [tracking, setTracking] = useState(false);
 
@@ -32,28 +41,43 @@ export default function DeliveryDashboard() {
 
     const watchIdRef = useRef<number | null>(null)
 
-    const fetchOrders = async () => {
-        setLoading(true);
+    const fetchOrders = useCallback(async () => {
         try {
             const { data } = await axios.get(
                 `${API_URL}/delivery/my-deliveries?status=${tab}`,
                 getAuthHeaders()
             );
+            if (!Array.isArray(data.orders)) {
+                throw new Error("The deliveries response was invalid");
+            }
+            setError(null);
             setOrders(data.orders);
-        } catch (error: any) {
-            toast.error(
-                error?.response?.data?.message || "Failed to load deliveries"
-            );
+        } catch (error: unknown) {
+            const message = getRequestErrorMessage(error, "Failed to load deliveries");
+            setOrders([]);
+            setError(message);
+            toast.error(message);
         } finally {
             setLoading(false);
         }
-    };
-
-    useEffect(() => {
-        fetchOrders();
     }, [tab]);
 
-    // send location every 10s for active deliveries
+    useEffect(() => {
+        let active = true;
+        queueMicrotask(() => {
+            if (active) void fetchOrders();
+        });
+        return () => {
+            active = false;
+        };
+    }, [fetchOrders]);
+
+    const refreshOrders = () => {
+        setLoading(true);
+        void fetchOrders();
+    };
+
+    // Share location only while tracking is enabled.
     useEffect(() => {
         const activeOrders = orders.filter((o) =>
             ["Assigned", "Packed", "Out for Delivery"].includes(o.status)
@@ -75,35 +99,38 @@ export default function DeliveryDashboard() {
                     `${API_URL}/delivery/my-deliveries/${order.id}/location`,
                     { lat, lng },
                     getAuthHeaders()
-                ).catch(() => { });
+                ).then(() => {
+                    setLocationError(null);
+                }).catch((error: unknown) => {
+                    setLocationError(getRequestErrorMessage(error, "Failed to share location"));
+                });
             });
         }
 
         watchIdRef.current = navigator.geolocation.watchPosition(
             sendLocation,
-            () => { }, {
+            (error) => setLocationError(error.message || "Unable to read your location"), {
             enableHighAccuracy: true,
             maximumAge: 10000,
         }
         );
-
-        // Also send on interval for more consistent updates
-        const interval = setInterval(() => {
-            navigator.geolocation.getCurrentPosition(
-                sendLocation,
-                () => { },
-                { enableHighAccuracy: true }
-            );
-        }, 10000);
 
         return () => {
             if (watchIdRef.current !== null) {
                 navigator.geolocation.clearWatch(watchIdRef.current);
                 watchIdRef.current = null;
             }
-            clearInterval(interval);
         };
     }, [orders, tracking]);
+
+    const handleToggleTracking = () => {
+        if (!tracking && !navigator.geolocation) {
+            setLocationError("Location sharing is not supported by this browser");
+            return;
+        }
+        setLocationError(null);
+        setTracking((previous) => !previous);
+    };
 
     const handleUpdateStatus = async (orderId: string, status: string) => {
         try {
@@ -113,9 +140,9 @@ export default function DeliveryDashboard() {
                 getAuthHeaders()
             );
             toast.success(`Status updated to ${status}`);
-            fetchOrders();
-        } catch (error: any) {
-            toast.error(error?.response?.data?.message || "Failed");
+            refreshOrders();
+        } catch (error: unknown) {
+            toast.error(getRequestErrorMessage(error, "Failed to update delivery status"));
         }
     };
 
@@ -131,9 +158,9 @@ export default function DeliveryDashboard() {
             toast.success("Delivery completed!");
             setOtpModal(null);
             setOtp("");
-            fetchOrders();
-        } catch (error: any) {
-            toast.error(error?.response?.data?.message || error?.message);
+            refreshOrders();
+        } catch (error: unknown) {
+            toast.error(getRequestErrorMessage(error, "Failed to complete delivery"));
         } finally {
             setSubmitting(false);
         }
@@ -151,9 +178,9 @@ export default function DeliveryDashboard() {
             toast.success("Delivery cancelled");
             setCancelModal(null);
             setCancelReason("");
-            fetchOrders();
-        } catch (error: any) {
-            toast.error(error?.response?.data?.message || "Failed");
+            refreshOrders();
+        } catch (error: unknown) {
+            toast.error(getRequestErrorMessage(error, "Failed to cancel delivery"));
         } finally {
             setSubmitting(false);
         }
@@ -164,21 +191,29 @@ export default function DeliveryDashboard() {
             {/* Tabs + Tracking toggle */}
             <div className="flex items-center gap-2 flex-wrap">
                 {(["active", "completed"] as const).map((t) => (
-                    <button key={t} onClick={() => setTab(t)} className={`px-4 py-2 text-sm font-medium rounded-xl transition-colors ${tab === t ? "bg-app-green text-white" : "bg-white text-zinc-600 hover:bg-app-cream border border-app-border"}`}>
+                    <button key={t} onClick={() => { if (t !== tab) setLoading(true); setTab(t); }} className={`px-4 py-2 text-sm font-medium rounded-xl transition-colors ${tab === t ? "bg-app-green text-white" : "bg-white text-zinc-600 hover:bg-app-cream border border-app-border"}`}>
                         {t === "active" ? "Active" : "Completed"}
                     </button>
                 ))}
                 <div className="ml-auto">
-                    <button onClick={() => setTracking((prev) => !prev)} className={`px-4 py-2 text-sm font-medium rounded-xl transition-colors flex items-center gap-1.5 ${tracking ? "bg-green-600 text-white" : "bg-white text-zinc-600 border border-app-border hover:bg-app-cream"}`}>
+                    <button onClick={handleToggleTracking} className={`px-4 py-2 text-sm font-medium rounded-xl transition-colors flex items-center gap-1.5 ${tracking ? "bg-green-600 text-white" : "bg-white text-zinc-600 border border-app-border hover:bg-app-cream"}`}>
                         <NavigationIcon className={`w-3.5 h-3.5 ${tracking ? "animate-pulse" : ""}`} />
                         {tracking ? "Sharing Location" : "Share Location"}
                     </button>
                 </div>
             </div>
+            {locationError && <p role="alert" className="text-sm text-red-700">{locationError}</p>}
 
             {/* Orders */}
             {loading ? (
                 <Loading />
+            ) : error ? (
+                <div role="alert" className="text-center py-12 bg-white rounded-2xl border border-app-border">
+                    <p className="text-sm text-red-700 mb-4">Unable to load deliveries: {error}</p>
+                    <button onClick={refreshOrders} className="px-4 py-2 text-sm font-medium bg-app-green text-white rounded-xl hover:bg-app-green-light transition-colors">
+                        Retry
+                    </button>
+                </div>
             ) : orders.length === 0 ? (
                 <div className="text-center py-16 bg-white rounded-2xl border border-app-border">
                     <PackageIcon className="size-12 text-app-border mx-auto mb-3" />

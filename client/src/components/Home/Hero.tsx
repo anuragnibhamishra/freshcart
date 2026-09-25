@@ -5,7 +5,7 @@ import { Link } from "react-router-dom"
 const Hero = () => {
   return (
     <section className="relative overflow-hidden min-h-135 mb-10 rounded-3xl flex items-center">
-        <img src={heroSectionData.hero_image} alt="HeroImage" className="absolute inset-0 w-full h-full object-cover" />
+        <img src={heroSectionData.hero_image} alt="HeroImage" fetchPriority="high" decoding="async" className="absolute inset-0 w-full h-full object-cover" />
         <div className="absolute inset-0 bg-linear-to-r from-app-green via-app-green/60 to-transparent"/>
         <div className="relative max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-20">
             <div className="max-w-xl xl:pl-10">
