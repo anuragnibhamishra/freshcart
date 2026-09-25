@@ -1,6 +1,5 @@
 import { useNavigate } from "react-router-dom"
 import { useCart } from "../context/CartContext";
-import { dummyAddressData } from "../assets/assets";
 import { useState } from "react";
 import type { Address } from "../types";
 import { MapPinIcon, CreditCardIcon, CheckIcon, ArrowLeft, ChevronRightIcon } from "lucide-react";

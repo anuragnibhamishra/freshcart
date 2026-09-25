@@ -1,5 +1,5 @@
 import { CheckIcon, TruckIcon } from "lucide-react";
-import type { Address } from "../../types";
+import type { Address } from "../types";
 
 interface CheckoutReviewProps {
     address: Address;
